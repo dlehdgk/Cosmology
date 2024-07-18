@@ -28,7 +28,7 @@ class Cosmo:
 
     # function to calculate curvature density
     def curvature(self):
-        return 1 - self.Om() - self.Or() - self.Ol()
+        return 1 - self.mass() - self.radiation() - self.constant()
 
     # function to calculate the Hubble parameter H at a given redshift z.
     # If SI=True then returns value in s^-1 otherwise returns km/s/Mpc
@@ -48,11 +48,11 @@ class Cosmo:
     # function to find the age of the universe at a given z default gives present age of the universe.
     # If years=True gives ages in years otherwise in seconds.
     def age(self, z=0, years=True):
-        time = sp.quad(lambda x: 1 / (1 + x) * self.rate(x, SI=True), z, np.inf)
+        time = sp.quad(lambda x: 1 / ((1 + x) * self.rate(x, SI=True)), z, np.inf)
         if years == True:
-            return time / 3600 / 24 / 365.25
+            return time[0] / 3600 / 24 / 365.25
         else:
-            return time
+            return time[0]
 
     # defined sink function which depends on curvature
     def sink(self, x):
@@ -66,27 +66,19 @@ class Cosmo:
     # function to find the luminosity distance to an object at redshift z
     # If Mpc=True, then returns distance in Mpc else in meters
     def lum(self, z, Mpc=True):
+        I = sp.quad(lambda x: 1 / self.rate(x, SI=True), 0, z)
         if self.curvature() == 0:
-            dl = (
-                3e8
-                / self.rate(z, SI=True)
-                * (1 + z)
-                * sp.quad(lambda x: 1 / self.rate(x, SI=True), 0, z)
-            )
+            dl = 3e8 * (1 + z) * I[0]
         else:
             dl = (
                 3e8
-                / self.rate(z, SI=True)
                 * (1 + z)
                 * 1
                 / np.sqrt(abs(self.curvature()))
-                * self.sink(
-                    np.sqrt(abs(self.curvature()))
-                    * sp.quad(lambda x: 1 / self.rate(x, SI=True), 0, z)
-                )
+                * self.sink(np.sqrt(abs(self.curvature())) * I[0])
             )
         if Mpc == True:
-            return dl * 3.24078e-23
+            return dl / 3.08568e22
         else:
             return dl
 
